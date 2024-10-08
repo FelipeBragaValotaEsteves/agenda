@@ -1,19 +1,49 @@
+import 'package:sqflite/sqflite.dart';
 import '../models/contato.dart';
+import '../db/database_helper.dart';
 
 class ContatoRepository {
-  List<Contato> contatos = [];
+  final dbHelper = DatabaseHelper();
 
-  List<Contato> getContatos() => contatos;
+  Future<List<Contato>> getContatos() async {
+    final db = await dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query('contatos');
 
-  void adicionarContato(Contato contato) {
-    contatos.add(contato);
+    return List.generate(maps.length, (i) {
+      return Contato(
+        id: maps[i]['id'],
+        nome: maps[i]['nome'],
+        telefone: maps[i]['telefone'],
+        email: maps[i]['email'],
+      );
+    });
   }
 
-  void removerContato(int index) {
-    contatos.removeAt(index);
+  Future<void> adicionarContato(Contato contato) async {
+    final db = await dbHelper.database;
+    await db.insert(
+      'contatos',
+      contato.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  void atualizarContato(int index, Contato contato) {
-    contatos[index] = contato;
+  Future<void> atualizarContato(Contato contato) async {
+    final db = await dbHelper.database;
+    await db.update(
+      'contatos',
+      contato.toMap(),
+      where: 'id = ?',
+      whereArgs: [contato.id],
+    );
+  }
+
+  Future<void> removerContato(int id) async {
+    final db = await dbHelper.database;
+    await db.delete(
+      'contatos',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }

@@ -1,38 +1,91 @@
 import 'package:flutter/material.dart';
 import '../models/contato.dart';
+import '../repositories/repositorio_contato.dart';
+import 'cadastro_contato.dart';
 
-class ListaContatos extends StatelessWidget {
-  final List<Contato> contatos;
-  final Function(int) onEdit;
-  final Function(int) onDelete;
+class ListaContatos extends StatefulWidget {
+  @override
+  _ListaContatosState createState() => _ListaContatosState();
+}
 
-  ListaContatos(
-      {required this.contatos, required this.onEdit, required this.onDelete});
+class _ListaContatosState extends State<ListaContatos> {
+  final ContatoRepository _contatoRepository = ContatoRepository();
+  List<Contato> _contatos = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContatos();
+  }
+
+  Future<void> _loadContatos() async {
+    final contatos = await _contatoRepository.getContatos();
+    setState(() {
+      _contatos = contatos;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: contatos.length,
-      itemBuilder: (context, index) {
-        final contato = contatos[index];
-        return ListTile(
-          title: Text(contato.nome),
-          subtitle: Text('${contato.telefone}\n${contato.email}'),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(Icons.edit),
-                onPressed: () => onEdit(index),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Lista de Contatos'),
+      ),
+      body: ListView.builder(
+        itemCount: _contatos.length,
+        itemBuilder: (context, index) {
+          final contato = _contatos[index];
+          return ListTile(
+            title: Text(contato.nome),
+            subtitle: Text('${contato.telefone}\n${contato.email}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CadastroContato(
+                          contato: contato,
+                          onSave: (contatoEditado) async {
+                            await _contatoRepository.atualizarContato(contatoEditado);
+                            _loadContatos();
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () async {
+                    await _contatoRepository.removerContato(contato.id!);
+                    _loadContatos();
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CadastroContato(
+                onSave: (novoContato) async {
+                  await _contatoRepository.adicionarContato(novoContato);
+                  _loadContatos();
+                },
               ),
-              IconButton(
-                icon: Icon(Icons.delete),
-                onPressed: () => onDelete(index),
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+        child: Icon(Icons.add),
+      ),
     );
   }
 }

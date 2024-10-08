@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/contato.dart';
+import '../utils/validadores.dart';
 
 class CadastroContato extends StatefulWidget {
   final Contato? contato;
@@ -13,17 +14,21 @@ class CadastroContato extends StatefulWidget {
 
 class _CadastroContatoState extends State<CadastroContato> {
   final _formKey = GlobalKey<FormState>();
-  final _nomeController = TextEditingController();
-  final _telefoneController = TextEditingController();
-  final _emailController = TextEditingController();
+  late String _nome;
+  late String _telefone;
+  late String _email;
 
   @override
   void initState() {
     super.initState();
     if (widget.contato != null) {
-      _nomeController.text = widget.contato!.nome;
-      _telefoneController.text = widget.contato!.telefone;
-      _emailController.text = widget.contato!.email;
+      _nome = widget.contato!.nome;
+      _telefone = widget.contato!.telefone;
+      _email = widget.contato!.email;
+    } else {
+      _nome = '';
+      _telefone = '';
+      _email = '';
     }
   }
 
@@ -31,62 +36,88 @@ class _CadastroContatoState extends State<CadastroContato> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title:
-              Text(widget.contato == null ? 'Novo Contato' : 'Editar Contato')),
+        title: Text(widget.contato == null ? 'Novo Contato' : 'Editar Contato'),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               TextFormField(
-                controller: _nomeController,
+                initialValue: _nome,
                 decoration: InputDecoration(labelText: 'Nome'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o nome';
-                  }
-                  return null;
-                },
+                validator: Validators.validarNome,
+                onSaved: (value) => _nome = value!,
               ),
               TextFormField(
-                controller: _telefoneController,
+                initialValue: _telefone,
                 decoration: InputDecoration(labelText: 'Telefone'),
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o telefone';
-                  }
-                  return null;
-                },
+                validator: Validators.validarTelefone,
+                onSaved: (value) => _telefone = value!,
               ),
               TextFormField(
-                controller: _emailController,
+                initialValue: _email,
                 decoration: InputDecoration(labelText: 'E-mail'),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null ||
-                      !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                    return 'Por favor, insira um e-mail válido';
-                  }
-                  return null;
-                },
+                validator: Validators.validarEmail,
+                onSaved: (value) => _email = value!,
               ),
               SizedBox(height: 20),
               ElevatedButton(
+                child: Text('Salvar'),
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    final novoContato = Contato(
-                      nome: _nomeController.text,
-                      telefone: _telefoneController.text,
-                      email: _emailController.text,
+                    _formKey.currentState!.save();
+                    final contato = Contato(
+                      id: widget.contato?.id,
+                      nome: _nome,
+                      telefone: _telefone,
+                      email: _email,
                     );
-                    widget.onSave(novoContato);
-                    Navigator.pop(context);
+                    widget.onSave(contato);
+                    widget.onSave(contato);
+                    Navigator.pop(context); // Fecha a tela após salvar
                   }
                 },
-                child: Text('Salvar'),
               ),
+              if (widget.contato != null) ...[
+                SizedBox(height: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(),
+                  child: Text('Deletar'),
+                  onPressed: () async {
+                    // Confirmar deleção
+                    final confirmDelete = await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Confirmar Deleção'),
+                          content: Text('Deseja deletar este contato?'),
+                          actions: <Widget>[
+                            TextButton(
+                              child: Text('Cancelar'),
+                              onPressed: () {
+                                Navigator.of(context).pop(false);
+                              },
+                            ),
+                            TextButton(
+                              child: Text('Deletar'),
+                              onPressed: () {
+                                Navigator.of(context).pop(true);
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (confirmDelete == true) {
+                      // Deletar o contato
+                      Navigator.pop(context, 'delete');
+                    }
+                  },
+                ),
+              ]
             ],
           ),
         ),
